@@ -110,6 +110,22 @@ def _state_path(session_id: str) -> Path | None:
     return STATE_DIR / f"{key}.json"
 
 
+def _record_envelope(body: str) -> None:
+    """Test-only: keep the bytes the Guardian was handed, one JSON object per line.
+
+    Off unless ACS_ENVELOPE_LOG names a file. It reads nothing and decides nothing; the request
+    below is parsed and handled exactly as it would be without this line.
+    """
+    path = os.environ.get("ACS_ENVELOPE_LOG", "")
+    if not path:
+        return
+    try:
+        with open(path, "a", encoding="utf-8") as f:
+            print(json.dumps({"body": body}, ensure_ascii=False), file=f)
+    except OSError:
+        pass
+
+
 class SessionState:
     """A session's chain head and seen request_ids, persisted as 0600 JSON; a corrupt file loads as a fresh session."""
 
@@ -541,6 +557,7 @@ class GuardianHandler(http.server.BaseHTTPRequestHandler):
                                           "message": f"Request body {length} bytes exceeds {MAX_REQUEST_BODY_BYTES} cap"}})
             return
         body = self.rfile.read(length).decode("utf-8")
+        _record_envelope(body)
         try:
             request = json.loads(body)
         except json.JSONDecodeError:
