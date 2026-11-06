@@ -4,6 +4,7 @@ name: adapter-tests
 # on every push or PR that touches adapter or spec source.
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - 'adapters/**'
