@@ -46,6 +46,8 @@ class _CountingResult(unittest.TextTestRunner.resultclass):
 
 
 # Exact (suite, test id, reason) triples tolerated by default; any other skip fails the run.
+_NTFS_ONLY = "NTFS ACLs exist on Windows only"
+
 EXPECTED_SKIPS = frozenset({
     ("cursor",
      "tests.integrations.cursor.test_live.LiveCursorPlaceholder.test_run_manual_procedure",
@@ -56,7 +58,16 @@ EXPECTED_SKIPS = frozenset({
     ("claude-code",
      "tests.integrations.claude_code.test_live.LiveClaudeCodeRoundTrip.test_destructive_bash_blocked",
      "live Claude Code test is opt-in: set ACS_LIVE_CLAUDE=1 to call the real claude CLI"),
-})
+}) | frozenset(
+    # NTFS DACLs exist only on Windows, so these three cannot run on the ubuntu job. They are
+    # listed rather than excluded so that a Windows runner collecting them cannot silently pass.
+    ("client", f"tests.client.test_secrets.RealDacl.{name}", _NTFS_ONLY)
+    for name in (
+        "test_a_dacl_with_only_the_owner_and_root_equivalents_passes",
+        "test_a_dacl_that_grants_everyone_read_is_refused",
+        "test_a_file_with_no_dacl_is_refused",
+    )
+)
 
 
 def _is_expected_skip(suite: str, test_id: str, reason: str) -> bool:

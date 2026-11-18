@@ -150,8 +150,11 @@ class Classification(_SessionTest):
 
     def test_a_secret_that_cannot_be_loaded_refuses_the_session(self) -> None:
         secret_file = self.cache / "hmac.key"
-        secret_file.write_text(SECRET)
-        secret_file.chmod(0o644)
+        # Empty, not chmod 0o644: an empty secret fails the same way on every platform.
+        # A wide mode only forces a failure where the 0600 rule runs; on Windows the NTFS
+        # DACL of a freshly created file passes, so the mode would prove nothing there.
+        secret_file.write_bytes(b"")
+        secret_file.chmod(0o600)
         with mock.patch.dict(os.environ, {"ACS_HMAC_SECRET_FILE": str(secret_file), "ACS_HMAC_KEY_ID": "test-key"}):
             decision, calls = self._open()
         self.assertIsInstance(decision, SessionRefused)

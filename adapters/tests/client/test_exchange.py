@@ -204,8 +204,11 @@ class ExchangeCauses(unittest.TestCase):
     def test_a_secret_that_cannot_be_loaded_refuses_the_answer(self) -> None:
         with tempfile.TemporaryDirectory() as d:
             secret_file = Path(d) / "hmac.key"
-            secret_file.write_text(SECRET)
-            secret_file.chmod(0o644)
+            # Empty, not chmod 0o644: an empty secret fails the same way on every platform.
+            # A wide mode only forces a failure where the 0600 rule runs; on Windows the NTFS
+            # DACL of a freshly created file passes, so the mode would prove nothing there.
+            secret_file.write_bytes(b"")
+            secret_file.chmod(0o600)
             with mock.patch.dict(os.environ, {"ACS_HMAC_SECRET_FILE": str(secret_file), "ACS_HMAC_KEY_ID": "test-key"}):
                 outcome, _ = self._exchange(_json(_signed(_result())))
         self.assertIsInstance(outcome, Refused)
